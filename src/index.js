@@ -44,7 +44,7 @@ const incomingMiddleware = (event, next) => {
   }
 
   if (["message", "postback", "text", "quick_reply"].includes(event.type)) {
-    
+
     service(shortUserId, event.payload || event.text)
     .then(({data}) => {
       const {result} = data
@@ -96,7 +96,7 @@ const incomingMiddleware = (event, next) => {
         remove: contextRemove(shortUserId)
       }
     }
-    
+
     next()
   }
 }
@@ -106,12 +106,13 @@ module.exports = {
   config: {
     accessToken: { type: 'string', env: 'APIAI_TOKEN' },
     lang: { type: 'string', default: 'en' },
-    mode: { type: 'choice', validation: ['fulfillment', 'default'], default: 'default' }
+    mode: { type: 'choice', validation: ['fulfillment', 'fulfillmentPlus', 'default'], default: 'default' },
+    actionIncludeFilter: { type: 'string', default: '(^$|^input\.(unknown|welcome)$|^smalltalk\.)' }
   },
 
   init: async function(bp, configurator) {
     checkVersion(bp, __dirname)
-    
+
     bp.middlewares.register({
       name: 'apiai.incoming',
       module: 'botpress-api.ai',
@@ -120,7 +121,7 @@ module.exports = {
       order: 10,
       description: 'Process natural language in the form of text. Structured data with an action and parameters for that action is injected in the incoming message event.'
     })
-    
+
     config = await configurator.loadAll()
     setService()
   },
@@ -133,8 +134,8 @@ module.exports = {
     })
 
     router.post('/config', async (req, res) => {
-      const { accessToken, lang, mode } = req.body
-      await configurator.saveAll({ accessToken, lang, mode })
+      const { accessToken, lang, mode, actionIncludeFilter } = req.body
+      await configurator.saveAll({ accessToken, lang, mode, actionIncludeFilter })
       config = await configurator.loadAll()
       setService()
       res.sendStatus(200)

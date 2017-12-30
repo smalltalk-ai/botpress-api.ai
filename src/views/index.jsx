@@ -59,6 +59,30 @@ const documentation = {
 
   **Tip:** This is great for non-programmers or if all your conversation logic is hosted on API.AI.
   `
+  ,
+  fulfillmentPlus: `### Fulfillment Plus
+
+  This mode will check if there's an available response in the \`fulfillment\` property of the API.AI response and respond automatically. No code required.
+
+  It will only respond to API.AI actions that match the RegEx in the **Actions to Fulfill**
+
+  default RegEx with match
+  - \`^$\` - an empty action
+  - \`^input\.(unknown|welcome)$\` - **input.unknown** or **input.welcome**
+    - **input.unknown** - action for *Default Fallback Intent*
+    - **input.welcome** - action for *Default Welcome Intent*
+  - \`^smalltalk\.\` - actions starting **smalltalk.** which are used by the built-in *Small Talk* Intents
+
+  all other actions will be skipped and can be handled using \`bp.hear\` in \`index.js\` 
+
+  \`\`\`js
+  bp.hear({'nlp.action': 'some.action.name'}, (event, next) => {
+    bp.messenger.sendText(event.user.id, 'My name is James')
+  })
+  \`\`\`
+
+  **Tip:** This is great for non-programmers or if all your conversation logic is hosted on API.AI.
+  `
 }
 
 export default class ApiModule extends React.Component {
@@ -75,6 +99,7 @@ export default class ApiModule extends React.Component {
     this.renderAccessToken = this.renderAccessToken.bind(this)
     this.renderRadioButton = this.renderRadioButton.bind(this)
     this.renderLanguage = this.renderLanguage.bind(this)
+    this.renderActionIncludeFilter = this.renderActionIncludeFilter.bind(this)
 
     this.handleAccesTokenChange = this.handleAccesTokenChange.bind(this)
     this.handleSaveChanges = this.handleSaveChanges.bind(this)
@@ -83,7 +108,7 @@ export default class ApiModule extends React.Component {
   }
 
   getStateHash() {
-    return this.state.accessToken + ' ' + this.state.lang + ' ' + this.state.mode
+    return this.state.accessToken + ' ' + this.state.lang + ' ' + this.state.mode + ' ' + this.state.actionIncludeFilter
   }
 
   getAxios() {
@@ -124,13 +149,20 @@ export default class ApiModule extends React.Component {
     })
   }
 
+  handleActionIncludeFilterChange(event) {
+    this.setState({
+      actionIncludeFilter: event.target.value
+    })
+  }
+
   handleSaveChanges() {
     this.setState({ loading:true })
 
     return this.getAxios().post('/api/botpress-apiai/config', {
       accessToken: this.state.accessToken,
       lang: this.state.lang,
-      mode: this.state.mode
+      mode: this.state.mode,
+      actionIncludeFilter: this.state.actionIncludeFilter
     })
     .then(() => {
       this.setState({
@@ -189,6 +221,25 @@ export default class ApiModule extends React.Component {
           <Col sm={8}>
             {this.renderRadioButton('Default', 'default')}
             {this.renderRadioButton('Fulfillment', 'fulfillment')}
+            {this.renderRadioButton('Fulfillment Plus', 'fulfillmentPlus')}
+          </Col>
+        </FormGroup>
+      </Row>
+    )
+  }
+
+  renderActionIncludeFilter() {
+    if (this.state.mode !== 'fulfillmentPlus') {
+      return
+    }
+    return (
+      <Row>
+        <FormGroup>
+          <Col componentClass={ControlLabel} sm={3}>
+            Actions to Fulfill
+          </Col>
+          <Col sm={8}>
+            <FormControl type="text" value={this.state.actionIncludeFilter} onChange={this.handleActionIncludeFilterChange}/>
           </Col>
         </FormGroup>
       </Row>
@@ -258,6 +309,7 @@ export default class ApiModule extends React.Component {
                 {this.renderAccessToken()}
                 {this.renderLanguage()}
                 {this.renderMode()}
+                {this.renderActionIncludeFilter()}
               </div>
             </Panel>
             <Panel header="Documentation">
